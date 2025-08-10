@@ -13,7 +13,7 @@ const highscorePath = path.join(__dirname, "highscore.json");
 const playersDir = path.join(__dirname, "players");
 const bankPath = path.join(__dirname, "bank.json");
 let playerName;
-let money = 1000;
+let money = 100;
 let bet = 0;
 let choice;
 let again = "yes";
