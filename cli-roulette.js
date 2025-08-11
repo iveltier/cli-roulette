@@ -50,6 +50,7 @@ function loadOrCreatePlayer(name) {
       highscore: 0,
       gamesPlayed: 0,
       banUntil: null,
+      balance: 100,
     };
     fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
     return defaultData;
@@ -103,9 +104,9 @@ function welcome() {
   console.log(
     chalk.bold(
       `\nWelcome ${playerName} to the absolute fantastic Cli-Roulette ♠ experience! \nYour current money: ${chalk.bgGreen.black(
-        money
-      )}$`
-    )
+        money,
+      )}$`,
+    ),
   );
 }
 
@@ -123,7 +124,7 @@ function loadHighscore() {
   if (!fs.existsSync(highscorePath)) {
     fs.writeFileSync(
       highscorePath,
-      JSON.stringify({ name: "Nobody", score: 0 }, null, 2)
+      JSON.stringify({ name: "Nobody", score: 0 }, null, 2),
     );
   }
   const data = fs.readFileSync(highscorePath, "utf-8");
@@ -137,15 +138,15 @@ function saveHighscore(name, score) {
   } else {
     console.log(
       chalk.yellow(
-        `\nNo new global highscore. Current record: ${current.name} with ${current.score}$`
-      )
+        `\nNo new global highscore. Current record: ${current.name} with ${current.score}$`,
+      ),
     );
   }
 }
 function showHighscore() {
   const { name, score } = loadHighscore();
   console.log(
-    chalk.cyan(`\nThe current global highsore is ${score}$ from ${name}`)
+    chalk.cyan(`\nThe current global highsore is ${score}$ from ${name}`),
   );
   console.log(
     chalk.blue(
@@ -153,8 +154,8 @@ function showHighscore() {
         playerData.highscore === 0
           ? "You dont have a highscore right now"
           : `Your highscore is ${playerData.highscore}$`
-      }`
-    )
+      }`,
+    ),
   );
 }
 
@@ -183,7 +184,7 @@ async function handleBet() {
   } else {
     spinner.error({
       text: `You don't have enough money (${chalk.bgGreen.black(
-        money
+        money,
       )}) to gamble. Try again!`,
     });
     await askHowMuchToBet();
@@ -195,7 +196,7 @@ async function setYourBet() {
     "\nTake your bet! \nYou can choose between betting on:\n" +
       "- a specific number (0–36)\n" +
       "- even or odd\n" +
-      "- red or black\n"
+      "- red or black\n",
   );
   const spinner = createSpinner(" ").start();
   await sleepLong();
@@ -364,10 +365,26 @@ async function main() {
     const remaining = Math.ceil((playerData.banUntil - Date.now()) / 1000);
     console.log(
       chalk.red.bold(
-        `\n⛔ You are banned from playing for ${remaining} more seconds.\nCome back later!`
-      )
+        `\n⛔ You are banned from playing for ${remaining} more seconds.\nCome back later!`,
+      ),
     );
     process.exit(0);
+  }
+  if (playerData.balance === 0) {
+    money = 100;
+    saveBankData(-100);
+    console.log(
+      chalk.green("\nYou were broke, but the bank granted you 100$ 💰"),
+    );
+  } else {
+    if (playerData.gamesPlayed > 1) {
+      saveBankData(playerData.balance * 0.1);
+      playerData.balance = playerData.balance * 0.9;
+      console.log(
+        chalk.red("You had to pay the bank some money back to play again"),
+      );
+    }
+    money = playerData.balance;
   }
   while (again === "yes" && money > 0) {
     await playRound();
@@ -386,7 +403,7 @@ async function main() {
   if (money <= 0) {
     playerData.banUntil = Date.now() + 2 * 60 * 1000;
     console.log(
-      chalk.red.bold("\n💸 You're broke! You've been banned for 2 minutes.")
+      chalk.red.bold("\n💸 You're broke! You've been banned for 2 minutes."),
     );
   } else {
     playerData.banUntil = null;
@@ -396,14 +413,15 @@ async function main() {
   if (money > playerData.highscore) {
     playerData.highscore = money;
   }
+  playerData.balance = money;
   savePlayerData(playerData);
   saveHighscore(playerName, money);
   console.log(
     chalk.red.bold(
       `\nThanks for playing CLI ROULETTE! Final money: ${chalk.bgGreen.black(
-        money
-      )}$\n`
-    )
+        money,
+      )}$\n`,
+    ),
   );
   process.exit(0);
 }
