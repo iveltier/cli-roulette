@@ -51,6 +51,7 @@ function loadOrCreatePlayer(name) {
       gamesPlayed: 0,
       banUntil: null,
       balance: 100,
+      timesGotMoneyFromBank: 0,
     };
     fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
     return defaultData;
@@ -312,8 +313,8 @@ async function handleResult() {
       rainbowTitle.start();
       await sleepLong();
       rainbowTitle.stop();
-      money = money - bet + bet * 2.5;
-      profitChange = -bet * 1.5;
+      money = money - bet + bet * 2;
+      profitChange = -bet;
       break;
     case color:
       rainbowTitle.start();
@@ -344,6 +345,46 @@ async function tryAgain() {
   });
   again = answer.again;
 }
+function checkBanStatus(playerData) {
+  if (playerData.banUntil && Date.now() < playerData.banUntil) {
+    const remaining = Math.ceil((playerData.banUntil - Date.now()) / 1000);
+    console.log(
+      chalk.red.bold(
+        `\n⛔ You are banned from playing for ${remaining} more seconds.\nCome back later!`,
+      ),
+    );
+    return true;
+  }
+  return false;
+}
+function handleBalance(playerData) {
+  if (playerData.balance === 0) {
+    playerData.balance = 100;
+    saveBankData(-100);
+    playerData.timesGotMoneyFromBank++;
+    console.log(
+      chalk.green("\nYou were broke, but the bank granted you 100$ 💰"),
+    );
+  } else {
+    if (playerData.gamesPlayed >= 1) {
+      const times = playerData.timesGotMoneyFromBank;
+      let fee = 0;
+
+      if (times >= 35) {
+        fee = playerData.balance * 0.4;
+      } else {
+        const factor = Math.max(0, (times + 4) / 100);
+        fee = playerData.balance * factor;
+      }
+      fee = Math.floor(fee);
+      saveBankData(fee);
+      playerData.balance -= fee;
+      console.log(
+        chalk.red("You had to pay the bank some money back to play again"),
+      );
+    }
+  }
+}
 
 async function playRound() {
   welcome();
@@ -360,32 +401,11 @@ async function main() {
   ensurePlayersDirectory();
   await askPlayerName();
   playerData = loadOrCreatePlayer(playerName);
+  if (checkBanStatus(playerData)) return;
 
-  if (playerData.banUntil && Date.now() < playerData.banUntil) {
-    const remaining = Math.ceil((playerData.banUntil - Date.now()) / 1000);
-    console.log(
-      chalk.red.bold(
-        `\n⛔ You are banned from playing for ${remaining} more seconds.\nCome back later!`,
-      ),
-    );
-    process.exit(0);
-  }
-  if (playerData.balance === 0) {
-    money = 100;
-    saveBankData(-100);
-    console.log(
-      chalk.green("\nYou were broke, but the bank granted you 100$ 💰"),
-    );
-  } else {
-    if (playerData.gamesPlayed > 1) {
-      saveBankData(playerData.balance * 0.1);
-      playerData.balance = playerData.balance * 0.9;
-      console.log(
-        chalk.red("You had to pay the bank some money back to play again"),
-      );
-    }
-    money = playerData.balance;
-  }
+  handleBalance(playerData);
+  money = playerData.balance;
+
   while (again === "yes" && money > 0) {
     await playRound();
     if (again === "yes" && money > 0) {
