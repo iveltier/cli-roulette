@@ -94,8 +94,6 @@ function savePlayerData(playerData) {
 
 const sleepShort = (ms = 1500) => new Promise((r) => setTimeout(r, ms));
 
-const sleepLong = (ms = 2000) => new Promise((r) => setTimeout(r, ms));
-
 async function start() {
 	console.log("\n");
 	const ascii = await generateASCII("CLI ROULETTE", "3-D");
@@ -287,7 +285,7 @@ async function setYourBet() {
 			const { highLow } = await inquirer.prompt({
 				name: "highLow",
 				type: "list",
-				message: "Do you bet on high(19-36) or low (1-18)?",
+				message: "Do you bet on low (1-18) or high(19-36)?",
 				choices: ["low", "high"],
 			});
 			choice = highLow;
@@ -491,7 +489,6 @@ async function main() {
 		await playRound();
 		rounds++;
 		if (again === "yes" && money > 0) {
-			await sleepShort(1000);
 			console.clear();
 		} else if (again === "yes" && money <= 0) {
 			console.clear();
@@ -502,6 +499,7 @@ async function main() {
 			glitch.stop();
 		}
 	}
+
 	if (money <= 0) {
 		playerData.banUntil = Date.now() + 2 * 60 * 1000;
 		console.log(
